@@ -489,6 +489,8 @@ private fun resolveMegingiardAppColors(
         AppThemeOption.AURORA -> ThemeMode.AURORA
         AppThemeOption.RETRO_PHOSPHOR -> ThemeMode.RETRO_PHOSPHOR
         AppThemeOption.ROYAL_ASGARD -> ThemeMode.ROYAL_ASGARD
+        AppThemeOption.CATPPUCCIN_MACCHIATO -> ThemeMode.CATPPUCCIN_MACCHIATO
+        AppThemeOption.CYBERPINK -> ThemeMode.CYBERPINK
         else -> null
     }
     if (megingiardMode != null) {
@@ -560,7 +562,9 @@ private val MegingiardThemeOptions = listOf(
     AppThemeOption.VALHALLA,
     AppThemeOption.AURORA,
     AppThemeOption.RETRO_PHOSPHOR,
-    AppThemeOption.ROYAL_ASGARD
+    AppThemeOption.ROYAL_ASGARD,
+    AppThemeOption.CATPPUCCIN_MACCHIATO,
+    AppThemeOption.CYBERPINK
 )
 
 @OptIn(ExperimentalComposeUiApi::class)

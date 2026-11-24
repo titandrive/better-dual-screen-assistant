@@ -356,6 +356,30 @@ enum class AppThemeOption(
         previewBackground = Color.Black,
         previewSurface = Color(0xFF12110E),
         previewAccent = Color(0xFFFFD700)
+    ),
+    CATPPUCCIN_MACCHIATO(
+        id = 109,
+        displayName = "Catppuccin Macchiato",
+        shortTileLabel = "Macchiato",
+        displayNameRes = R.string.theme_catppuccin_macchiato,
+        shortTileLabelRes = R.string.theme_catppuccin_macchiato_short,
+        isMegingiardStyle = true,
+        megingiardIpcName = "CATPPUCCIN_MACCHIATO",
+        previewBackground = Color(0xFF181926),
+        previewSurface = Color(0xFF24273A),
+        previewAccent = Color(0xFFC6A0F6)
+    ),
+    CYBERPINK(
+        id = 110,
+        displayName = "Cyberpink",
+        shortTileLabel = "Cyberpink",
+        displayNameRes = R.string.theme_cyberpink,
+        shortTileLabelRes = R.string.theme_cyberpink,
+        isMegingiardStyle = true,
+        megingiardIpcName = "CYBERPINK",
+        previewBackground = Color.Black,
+        previewSurface = Color(0xFF1B1B1B),
+        previewAccent = Color(0xFFFF00FF)
     );
 
     fun displayName(context: Context): String = context.getString(displayNameRes)
@@ -599,6 +623,29 @@ private val RoyalAsgardPalette = buildMegingiardPalette(
     error = Color(0xFFD32F2F)
 )
 
+private val CatppuccinMacchiatoPalette = buildMegingiardPalette(
+    appBackground = Color(0xFF181926),
+    panelSurface = Color(0xFF24273A),
+    elevatedSurface = Color(0xFF363A4F),
+    pressedSurface = Color(0xFF494D64),
+    onSurface = Color(0xFFCAD3F5),
+    onSurfaceSecondary = Color(0xFFA5ADCB),
+    accent = Color(0xFFC6A0F6),
+    error = Color(0xFFED8796)
+)
+
+// PurgeBot's Cyberpink on AMOLED Ultra: page and cards pure black, raised controls just lifted off it.
+private val CyberpinkPalette = buildMegingiardPalette(
+    appBackground = Color.Black,
+    panelSurface = Color.Black,
+    elevatedSurface = Color(0xFF1B1B1B),
+    pressedSurface = Color(0xFF222222),
+    onSurface = Color.White,
+    onSurfaceSecondary = Color(0xFF9F9F9F),
+    accent = Color(0xFFFF00FF),
+    error = Color(0xFFFF3860)
+)
+
 val LocalTccColors = compositionLocalOf { PureBlackTccPalette }
 
 fun resolveTccPalette(
@@ -634,6 +681,8 @@ fun resolveTccPalette(
         AppThemeOption.AURORA -> AuroraBorealisPalette
         AppThemeOption.RETRO_PHOSPHOR -> RetroPhosphorPalette
         AppThemeOption.ROYAL_ASGARD -> RoyalAsgardPalette
+        AppThemeOption.CATPPUCCIN_MACCHIATO -> CatppuccinMacchiatoPalette
+        AppThemeOption.CYBERPINK -> CyberpinkPalette
     }
 }
 

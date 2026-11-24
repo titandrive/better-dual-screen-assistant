@@ -11,4 +11,6 @@ enum class ThemeMode(
     AURORA(supportsCustomAccent = false),
     RETRO_PHOSPHOR(supportsCustomAccent = false),
     ROYAL_ASGARD(supportsCustomAccent = false),
+    CATPPUCCIN_MACCHIATO(supportsCustomAccent = false),
+    CYBERPINK(supportsCustomAccent = false),
 }
