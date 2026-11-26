@@ -1,5 +1,7 @@
 package com.stormpanda.betterdualscreenassistant.ui.overlay
 
+import com.stormpanda.megingiard.ui.rememberHaptics
+import com.stormpanda.megingiard.ui.tapThen
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -669,6 +671,13 @@ fun CloseScreenTipOverlay(
     onCancel: () -> Unit,
     onConfirm: (noMoreTip: Boolean) -> Unit
 ) {
+    val haptics = rememberHaptics()
+    val onCancel = haptics.tapThen(onCancel)
+    val rawConfirm = onConfirm
+    val onConfirm: (Boolean) -> Unit = { value ->
+        haptics.tap()
+        rawConfirm(value)
+    }
     var noMoreTip by remember { mutableStateOf(false) }
     val colors = LocalTccColors.current
     val lookSpec = LocalTccLookSpec.current
@@ -761,13 +770,17 @@ fun CloseScreenTipOverlay(
                         if (event.nativeKeyEvent.action == KeyEvent.ACTION_UP &&
                             event.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_BUTTON_A
                         ) {
+                            haptics.tap()
                             noMoreTip = !noMoreTip
                             true
                         } else {
                             false
                         }
                     }
-                    .clickable { noMoreTip = !noMoreTip }
+                    .clickable {
+                        haptics.tap()
+                        noMoreTip = !noMoreTip
+                    }
                     .padding(
                         horizontal = if (isRetroid) 16.dp else aynDp(16f),
                         vertical = if (isRetroid) 6.dp else aynDp(6f)

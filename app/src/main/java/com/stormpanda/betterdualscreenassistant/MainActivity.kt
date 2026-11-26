@@ -1,5 +1,7 @@
 package com.stormpanda.betterdualscreenassistant
 
+import com.stormpanda.megingiard.ui.rememberHaptics
+import com.stormpanda.megingiard.ui.tapThen
 import android.annotation.SuppressLint
 import android.app.ActivityOptions
 import android.content.ComponentName
@@ -2026,6 +2028,7 @@ private fun ReorderableTccTile(
     isGrabbed: Boolean,
     onClick: () -> Unit
 ) {
+    val onClick = rememberHaptics().tapThen(onClick)
     val tccColors = LocalTccColors.current
     val appColors = LocalAppColors.current
     val lookSpec = LocalTccLookSpec.current

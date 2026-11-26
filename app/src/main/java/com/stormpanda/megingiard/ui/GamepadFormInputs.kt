@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.ui
 
+import androidx.compose.runtime.mutableIntStateOf
 import android.view.KeyEvent
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.animateContentSize
@@ -421,6 +422,17 @@ fun GamepadSliderCard(
     enabled: Boolean = true,
     itemKey: Any? = title,
 ) {
+    val haptics = rememberHaptics()
+    val rawValueChange = onValueChange
+    var lastHapticNotch by remember { mutableIntStateOf(Int.MIN_VALUE) }
+    // Faint tick each time the value crosses a tenth of the slider's range.
+    val onValueChange: (Float) -> Unit = { v ->
+        val span = (valueRange.endInclusive - valueRange.start).takeIf { it > 0f } ?: 1f
+        val notch = (((v - valueRange.start) / span) * 10f).toInt()
+        if (lastHapticNotch != Int.MIN_VALUE && notch != lastHapticNotch) haptics.step()
+        lastHapticNotch = notch
+        rawValueChange(v)
+    }
     val colors = LocalAppColors.current
     val deckBackInterceptor = LocalDeckBackInterceptor.current
     var isAdjusting by rememberSaveable { mutableStateOf(false) }

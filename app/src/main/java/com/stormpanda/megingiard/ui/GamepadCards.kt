@@ -116,6 +116,9 @@ fun GamepadFocusCard(
     clipToShape: Boolean = false,
     content: @Composable (isFocused: Boolean) -> Unit,
 ) {
+    val haptics = rememberHaptics()
+    val onClick = onClick?.let { haptics.tapThen(it) }
+    val onTouchClick = onTouchClick?.let { haptics.tapThen(it) }
     val colors = LocalAppColors.current
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
@@ -611,6 +614,18 @@ private fun GamepadAdjustableCard(
     onTouchClick: (() -> Unit)? = null,
     onFocusChanged: ((Boolean) -> Unit)? = null,
 ) {
+    val haptics = rememberHaptics()
+    // Each Left/Right step (D-pad or capsule arrow) gets the faint step tick.
+    val rawPrevious = onPrevious
+    val rawNext = onNext
+    val onPrevious: () -> Unit = {
+        haptics.step()
+        rawPrevious()
+    }
+    val onNext: () -> Unit = {
+        haptics.step()
+        rawNext()
+    }
     val deckBackInterceptor = LocalDeckBackInterceptor.current
     var isAdjusting by rememberSaveable { mutableStateOf(false) }
     var wasEverFocused by remember { mutableStateOf(false) }

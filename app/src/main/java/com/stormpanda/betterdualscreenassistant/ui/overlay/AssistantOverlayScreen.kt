@@ -1,5 +1,7 @@
 package com.stormpanda.betterdualscreenassistant.ui.overlay
 
+import com.stormpanda.megingiard.ui.rememberHaptics
+import com.stormpanda.megingiard.ui.tapThen
 import android.content.Context
 import android.graphics.Paint
 import android.graphics.Typeface
@@ -1552,6 +1554,7 @@ private fun FrameRatePanelCard(
     onToggleRefreshRate: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val onToggleRefreshRate = rememberHaptics().tapThen(onToggleRefreshRate)
     val context = LocalContext.current
     val colors = LocalTccColors.current
     val lookSpec = LocalTccLookSpec.current

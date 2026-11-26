@@ -128,8 +128,10 @@ fun PrimaryOverlayContainer(
         isVisible = true
     }
 
+    val haptics = rememberHaptics()
     val handleDismiss: () -> Unit = {
         if (isVisible) {
+            haptics.tap()
             val handledImmediately = onDismissRequest?.invoke() ?: false
             if (!handledImmediately) {
                 AppLog.d(TAG, "PrimaryOverlayContainer: dismissing '$title'")

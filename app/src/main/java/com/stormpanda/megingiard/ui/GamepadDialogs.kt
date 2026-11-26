@@ -95,6 +95,7 @@ fun GamepadConfirmModal(
     onCancel: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val onCancel = rememberHaptics().tapThen(onCancel)
     if (!visible) return
 
     val colors = LocalAppColors.current

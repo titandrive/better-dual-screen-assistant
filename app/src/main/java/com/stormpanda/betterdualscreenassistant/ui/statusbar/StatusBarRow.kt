@@ -1,5 +1,7 @@
 package com.stormpanda.betterdualscreenassistant.ui.statusbar
 
+import com.stormpanda.megingiard.ui.rememberHaptics
+import com.stormpanda.megingiard.ui.tapThen
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
@@ -107,6 +109,7 @@ fun StatusBarRow(
     recordingElapsedText: String = "",
     onStopRecordingClick: (() -> Unit)? = null
 ) {
+    val onTimeClick = rememberHaptics().tapThen(onTimeClick)
     val context = LocalContext.current
     val colors = LocalTccColors.current
     val lookSpec = LocalTccLookSpec.current

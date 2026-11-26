@@ -473,6 +473,7 @@ fun GamepadTwoPaneScaffold(
     onRemoveFocusedKey: ((depth: Int) -> Unit)? = null,
     scrollableDeck: Boolean = true,
 ) {
+    val onCustomBack = onCustomBack?.let { rememberHaptics().tapThen(it) }
     val colors = LocalAppColors.current
     val coroutineScope = rememberCoroutineScope()
     val inputModeManager = LocalInputModeManager.current

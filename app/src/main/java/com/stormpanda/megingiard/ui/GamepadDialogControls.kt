@@ -446,6 +446,17 @@ fun GamepadReorderCard(
     itemKey: Any? = title,
     onFocusChanged: ((Boolean) -> Unit)? = null,
 ) {
+    val haptics = rememberHaptics()
+    val rawMoveUp = onMoveUp
+    val rawMoveDown = onMoveDown
+    val onMoveUp: () -> Unit = {
+        haptics.step()
+        rawMoveUp()
+    }
+    val onMoveDown: () -> Unit = {
+        haptics.step()
+        rawMoveDown()
+    }
     val colors = LocalAppColors.current
 
     BackHandler(enabled = isMoving) {

@@ -228,6 +228,9 @@ fun Modifier.primaryOverlayFocusable(
     enabled: Boolean = true,
 ): Modifier =
     composed {
+        val haptics = rememberHaptics()
+        val onClick = onClick?.let { haptics.tapThen(it) }
+        val onTouchClick = onTouchClick?.let { haptics.tapThen(it) }
         val colors = LocalAppColors.current
         val effectiveInteractionSource = interactionSource ?: remember { MutableInteractionSource() }
         val isFocused by effectiveInteractionSource.collectIsFocusedAsState()

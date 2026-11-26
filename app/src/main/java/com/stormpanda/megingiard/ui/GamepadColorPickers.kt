@@ -78,6 +78,7 @@ fun GamepadColorSwatch(
     size: Dp = GC_SWATCH_SIZE,
     contentDescription: String? = null,
 ) {
+    val onClick = onClick?.let { rememberHaptics().tapThen(it) }
     val colors = LocalAppColors.current
     val isHighlighted = isSelected && isAdjusting
     val defaultDesc = stringResource(R.string.gamepad_color_selected)
@@ -179,8 +180,10 @@ fun GamepadColorPaletteCard(
         isAdjusting = false
     }
 
+    val colorHaptics = rememberHaptics()
     val onPreviousColor = {
         if (paletteColors.isNotEmpty()) {
+            colorHaptics.step()
             val currentIndex = paletteColors.indexOf(selectedColor)
             val prevIndex =
                 if (currentIndex <= 0) {
@@ -194,6 +197,7 @@ fun GamepadColorPaletteCard(
 
     val onNextColor = {
         if (paletteColors.isNotEmpty()) {
+            colorHaptics.step()
             val currentIndex = paletteColors.indexOf(selectedColor)
             val nextIndex =
                 if (currentIndex == -1 || currentIndex >= paletteColors.size - 1) {

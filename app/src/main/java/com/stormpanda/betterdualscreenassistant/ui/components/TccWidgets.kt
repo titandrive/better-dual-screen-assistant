@@ -42,6 +42,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -81,6 +82,10 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.min
+import com.stormpanda.megingiard.ui.Haptics
+import com.stormpanda.megingiard.ui.longPressThen
+import com.stormpanda.megingiard.ui.rememberHaptics
+import com.stormpanda.megingiard.ui.tapThen
 import com.stormpanda.betterdualscreenassistant.R
 import com.stormpanda.betterdualscreenassistant.ui.theme.LocalOverlayViewport
 import com.stormpanda.betterdualscreenassistant.ui.theme.LocalTccColors
@@ -257,6 +262,9 @@ fun TccButton(
     var isFocused by remember { mutableStateOf(false) }
     var longPressConsumed by remember { mutableStateOf(false) }
     val interactionSource = remember { MutableInteractionSource() }
+    val haptics = rememberHaptics()
+    val onClick = haptics.tapThen(onClick)
+    val onLongClick = onLongClick?.let { haptics.longPressThen(it) }
 
     val iconTint = tccTileIconTint(colors, isRetroid, selected)
     val textColor = if (selected) colors.primary else colors.secondary
@@ -447,7 +455,18 @@ fun HorizontalSlidingBar(
     var isFocused by remember { mutableStateOf(false) }
     var dragProgress by remember(progress) { mutableFloatStateOf(progress.toFloat()) }
     var isDragging by remember { mutableStateOf(false) }
-    val currentOnProgressChange by rememberUpdatedState(onProgressChange)
+    val haptics = rememberHaptics()
+    var lastHapticStep by remember { mutableIntStateOf(progress / Haptics.SLIDER_STEP_PERCENT) }
+    val rawOnProgressChange by rememberUpdatedState(onProgressChange)
+    // Every change goes through here: one faint tick each time the value crosses a 10% notch.
+    val currentOnProgressChange: (Int, Boolean) -> Unit = { pct, temporary ->
+        val notch = pct / Haptics.SLIDER_STEP_PERCENT
+        if (notch != lastHapticStep) {
+            lastHapticStep = notch
+            haptics.step()
+        }
+        rawOnProgressChange(pct, temporary)
+    }
 
     val displayProgress = if (isDragging) dragProgress.roundToInt() else progress
     val effectiveFillDimmed = isFillDimmed && !isDragging
@@ -543,7 +562,9 @@ fun HorizontalSlidingBar(
                             val ratio = (offset.x / size.width.toFloat()).coerceIn(0f, 1f)
                             val pct = (ratio * 100f).roundToInt()
                             dragProgress = pct.toFloat()
-                            currentOnProgressChange(pct, false)
+                            haptics.tap()
+                            lastHapticStep = pct / Haptics.SLIDER_STEP_PERCENT
+                            rawOnProgressChange(pct, false)
                         }
                     }
                     .pointerInput(Unit) {
@@ -637,6 +658,8 @@ fun HardwareInfoComponentCard(
     onClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
+    val haptics = rememberHaptics()
+    val onClick = onClick?.let { haptics.tapThen(it) }
     val colors = LocalTccColors.current
     val lookSpec = LocalTccLookSpec.current
     val isRetroid = lookSpec.isRetroid
@@ -1043,6 +1066,32 @@ fun TccOptionDialog(
     onToggleInjectOsTheme: ((Boolean) -> Unit)? = null,
     footerContent: (@Composable () -> Unit)? = null
 ) {
+    val haptics = rememberHaptics()
+    val rawSelectOption = onSelectOption
+    val onSelectOption: (Int) -> Unit = { id ->
+        haptics.tap()
+        rawSelectOption(id)
+    }
+    val onDismiss = haptics.tapThen(onDismiss)
+    val rawSelectAccentColor = onSelectAccentColor
+    val onSelectAccentColor: ((Color) -> Unit)? = rawSelectAccentColor?.let { select ->
+        { color: Color ->
+            haptics.tap()
+            select(color)
+        }
+    }
+    val rawCustomFanSpeedChange = onCustomFanSpeedChange
+    var lastFanHapticSpeed by remember { mutableIntStateOf(customFanSpeed / 5) }
+    val onCustomFanSpeedChange: ((Int) -> Unit)? = rawCustomFanSpeedChange?.let { change ->
+        { speed: Int ->
+            // Faint tick every 5% of fan speed while dragging.
+            if (speed / 5 != lastFanHapticSpeed) {
+                lastFanHapticSpeed = speed / 5
+                haptics.step()
+            }
+            change(speed)
+        }
+    }
     val colors = LocalTccColors.current
     val lookSpec = LocalTccLookSpec.current
     val isRetroid = lookSpec.isRetroid
@@ -1425,6 +1474,12 @@ fun TccDialogToggleRow(
     onCheckedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val haptics = rememberHaptics()
+    val rawCheckedChange = onCheckedChange
+    val onCheckedChange: (Boolean) -> Unit = { value ->
+        haptics.tap()
+        rawCheckedChange(value)
+    }
     val colors = LocalTccColors.current
     val lookSpec = LocalTccLookSpec.current
     val isRetroid = lookSpec.isRetroid
@@ -1508,6 +1563,12 @@ fun TccDialogCheckboxRow(
     modifier: Modifier = Modifier,
     enabled: Boolean = true
 ) {
+    val haptics = rememberHaptics()
+    val rawCheckedChange = onCheckedChange
+    val onCheckedChange: (Boolean) -> Unit = { value ->
+        haptics.tap()
+        rawCheckedChange(value)
+    }
     val colors = LocalTccColors.current
     val lookSpec = LocalTccLookSpec.current
     val isRetroid = lookSpec.isRetroid
@@ -1570,6 +1631,12 @@ fun TccDialogSegmentedRow(
     onSelectId: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val haptics = rememberHaptics()
+    val rawSelectId = onSelectId
+    val onSelectId: (Int) -> Unit = { id ->
+        haptics.tap()
+        rawSelectId(id)
+    }
     val colors = LocalTccColors.current
     val lookSpec = LocalTccLookSpec.current
     val isRetroid = lookSpec.isRetroid
