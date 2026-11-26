@@ -503,6 +503,7 @@ internal fun AssistantOverlayDialogHost(
                 options = screenTargetDialogOptions(),
                 selectedId = -1,
                 onSelectOption = { selected ->
+                    repository.setScreenRecordLastTarget(selected)
                     onDismiss()
                     onStartScreenRecordingRequest(selected)
                 },

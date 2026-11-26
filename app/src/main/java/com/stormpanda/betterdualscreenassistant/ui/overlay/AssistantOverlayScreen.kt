@@ -288,6 +288,7 @@ fun AssistantOverlayScreen(
                                 recordingElapsedText = recordingElapsedText,
                                 onOpenDialog = { dialog -> activeDialog = dialog },
                                 onCaptureScreenshot = onCaptureScreenshotRequest,
+                                onStartScreenRecording = onStartScreenRecordingRequest,
                                 onStopScreenRecording = onStopScreenRecordingRequest,
                                 onOpenScreenCast = onOpenScreenCastRequest,
                                 onDisconnectScreenCast = onDisconnectScreenCastRequest,
@@ -619,6 +620,12 @@ private data class QuickSettingTileModel(
     )
 }
 
+/** The entry after [current] in this list, wrapping around; the first entry if [current] isn't in it. */
+private fun <T> List<T>.nextAfter(current: T): T {
+    val index = indexOf(current)
+    return if (index < 0) first() else this[(index + 1) % size]
+}
+
 @Composable
 private fun buildQuickSettingTileModels(
     profile: DeviceProfile,
@@ -626,6 +633,7 @@ private fun buildQuickSettingTileModels(
     recordingElapsedText: String,
     onOpenDialog: (ActiveDialog) -> Unit,
     onCaptureScreenshot: (Int) -> Unit,
+    onStartScreenRecording: (Int) -> Unit,
     onStopScreenRecording: () -> Unit,
     onOpenScreenCast: () -> Unit,
     onDisconnectScreenCast: () -> Unit,
@@ -662,6 +670,7 @@ private fun buildQuickSettingTileModels(
     val preventAccidentalHome by repository.preventAccidentalHome.collectAsState()
     val screenshotTargetMode by repository.screenshotTargetMode.collectAsState()
     val screenRecordingState by repository.screenRecordingState.collectAsState()
+    val screenRecordLastTarget by repository.screenRecordLastTarget.collectAsState()
     val unifiedQuickTileOrder by repository.unifiedQuickTileOrder.collectAsState()
     val disabledQuickTiles by repository.disabledQuickTiles.collectAsState()
     val pluginRegistry = remember(context) { PluginRegistry.getInstance(context) }
@@ -855,9 +864,15 @@ private fun buildQuickSettingTileModels(
                         2 -> stringResource(R.string.key_focus_mode_lock_on_lower_screen) to true
                         else -> stringResource(R.string.key_focus_mode_touch_switchable) to false
                     }
-                    add(QuickSettingTileModel(focusLabel, R.drawable.ic_screen_focus_lock_mode, focusSelected) {
-                        onOpenDialog(ActiveDialog.FOCUS_LOCK)
-                    })
+                    add(
+                        QuickSettingTileModel(
+                            label = focusLabel,
+                            iconRes = R.drawable.ic_screen_focus_lock_mode,
+                            selected = focusSelected,
+                            onLongClick = { onOpenDialog(ActiveDialog.FOCUS_LOCK) },
+                            onClick = { repository.setScreenFocusLock(listOf(0, 1, 2).nextAfter(focusLock)) }
+                        )
+                    )
                 }
                 QuickSettingTileId.PERFORMANCE_MODE -> {
                     val (perfLabel, perfSelected) = when (performanceMode) {
@@ -865,9 +880,20 @@ private fun buildQuickSettingTileModels(
                         2 -> stringResource(R.string.text_performance_mode_height_performance) to true
                         else -> stringResource(R.string.text_performance_mode_normal) to false
                     }
-                    add(QuickSettingTileModel(perfLabel, R.drawable.ic_qs_performance, perfSelected) {
-                        onOpenDialog(ActiveDialog.PERFORMANCE_MODE)
-                    })
+                    add(
+                        QuickSettingTileModel(
+                            label = perfLabel,
+                            iconRes = R.drawable.ic_qs_performance,
+                            selected = perfSelected,
+                            onLongClick = { onOpenDialog(ActiveDialog.PERFORMANCE_MODE) },
+                            onClick = {
+                                val next = listOf(0, 1, 2).nextAfter(performanceMode)
+                                repository.setPerformanceMode(next)
+                                // Same rule as the dialog: High Performance never runs with the fan off.
+                                if (next == 2 && fanMode == 0) repository.setFanMode(4)
+                            }
+                        )
+                    )
                 }
                 QuickSettingTileId.FAN_CONTROL -> {
                     val (fanLabel, fanSelected) = when (fanMode) {
@@ -877,9 +903,19 @@ private fun buildQuickSettingTileModels(
                         6 -> stringResource(R.string.text_fan_control_custom) to true
                         else -> stringResource(R.string.text_fan_control_off) to false
                     }
-                    add(QuickSettingTileModel(fanLabel, R.drawable.ic_qs_fan_control, fanSelected) {
-                        onOpenDialog(ActiveDialog.FAN_CONTROL)
-                    })
+                    add(
+                        QuickSettingTileModel(
+                            label = fanLabel,
+                            iconRes = R.drawable.ic_qs_fan_control,
+                            selected = fanSelected,
+                            onLongClick = { onOpenDialog(ActiveDialog.FAN_CONTROL) },
+                            onClick = {
+                                // Dialog order; Off is not offered in High Performance.
+                                val fanCycle = if (performanceMode == 2) listOf(1, 4, 5, 6) else listOf(0, 1, 4, 5, 6)
+                                repository.setFanMode(fanCycle.nextAfter(fanMode))
+                            }
+                        )
+                    )
                 }
                 QuickSettingTileId.CLEAR_MEMORY -> add(
                     QuickSettingTileModel(stringResource(R.string.text_clear_memory_title), R.drawable.ic_qs_clean, false, onCleanMemory)
@@ -890,9 +926,15 @@ private fun buildQuickSettingTileModels(
                         1 -> stringResource(profile.controllerStyleOptionLabelRes) to true
                         else -> stringResource(R.string.fan_option_disable) to false
                     }
-                    add(QuickSettingTileModel(ctrlLabel, R.drawable.ic_qs_controller_style, ctrlSelected) {
-                        onOpenDialog(ActiveDialog.CONTROLLER_STYLE)
-                    })
+                    add(
+                        QuickSettingTileModel(
+                            label = ctrlLabel,
+                            iconRes = R.drawable.ic_qs_controller_style,
+                            selected = ctrlSelected,
+                            onLongClick = { onOpenDialog(ActiveDialog.CONTROLLER_STYLE) },
+                            onClick = { repository.setControllerStyle(listOf(2, 0, 1).nextAfter(controllerStyle)) }
+                        )
+                    )
                 }
                 QuickSettingTileId.CHARGING_SEPARATION -> add(
                     QuickSettingTileModel(
@@ -910,10 +952,12 @@ private fun buildQuickSettingTileModels(
                 )
                 QuickSettingTileId.AMBIENT_LIGHT -> add(
                     QuickSettingTileModel(
-                        stringResource(R.string.text_led_lights_open_title),
-                        R.drawable.ic_qs_ambient_light,
-                        ambientLight
-                    ) { repository.toggleAmbientLight() }
+                        label = stringResource(R.string.text_led_lights_open_title),
+                        iconRes = R.drawable.ic_qs_ambient_light,
+                        selected = ambientLight,
+                        onLongClick = { repository.openAmbientLightPanel() },
+                        onClick = { repository.toggleAmbientLight() }
+                    )
                 )
                 QuickSettingTileId.FORCE_LANDSCAPE -> add(
                     QuickSettingTileModel(
@@ -935,9 +979,33 @@ private fun buildQuickSettingTileModels(
                         AppThemeOption.STOCK_DARK -> stringResource(R.string.text_dark_theme) to true
                         else -> stringResource(currentThemeOpt.shortTileLabelRes) to true
                     }
-                    add(QuickSettingTileModel(themeLabel, R.drawable.ic_qs_theme_mode, themeSelected) {
-                        onOpenDialog(ActiveDialog.THEME_MODE)
-                    })
+                    add(
+                        QuickSettingTileModel(
+                            label = themeLabel,
+                            iconRes = R.drawable.ic_qs_theme_mode,
+                            selected = themeSelected,
+                            onLongClick = { onOpenDialog(ActiveDialog.THEME_MODE) },
+                            onClick = {
+                                // Step through the current source's themes: stock ones, or the custom palettes.
+                                val group = when {
+                                    rawThemeOpt == AppThemeOption.SYNC_MEGINGIARD -> emptyList()
+                                    rawThemeOpt.isMegingiardStyle -> AppThemeOption.entries.filter {
+                                        it.isMegingiardStyle && it != AppThemeOption.SYNC_MEGINGIARD
+                                    }
+                                    else -> listOf(
+                                        AppThemeOption.STOCK_SYSTEM,
+                                        AppThemeOption.STOCK_LIGHT,
+                                        AppThemeOption.STOCK_DARK
+                                    )
+                                }
+                                if (group.isEmpty()) {
+                                    onOpenDialog(ActiveDialog.THEME_MODE)
+                                } else {
+                                    repository.setThemeMode(group.nextAfter(rawThemeOpt).id)
+                                }
+                            }
+                        )
+                    )
                 }
                 QuickSettingTileId.WIFI -> add(
                     QuickSettingTileModel(tileId.gridTitle(context), R.drawable.ic_qs_wifi, wifiEnabled) { repository.toggleWifi() }
@@ -992,9 +1060,24 @@ private fun buildQuickSettingTileModels(
                     } else {
                         tileId.gridTitle(context)
                     }
-                    add(QuickSettingTileModel(tileLabel, R.drawable.ic_qs_screen_record, isRecordingScreen) {
-                        if (isRecordingScreen) onStopScreenRecording() else onOpenDialog(ActiveDialog.SCREEN_RECORD)
-                    })
+                    add(
+                        QuickSettingTileModel(
+                            label = tileLabel,
+                            iconRes = R.drawable.ic_qs_screen_record,
+                            selected = isRecordingScreen,
+                            onLongClick = if (isRecordingScreen) null else {
+                                { onOpenDialog(ActiveDialog.SCREEN_RECORD) }
+                            },
+                            onClick = {
+                                when {
+                                    isRecordingScreen -> onStopScreenRecording()
+                                    screenRecordLastTarget >= SystemSettingsRepository.SCREENSHOT_TARGET_TOP ->
+                                        onStartScreenRecording(screenRecordLastTarget)
+                                    else -> onOpenDialog(ActiveDialog.SCREEN_RECORD)
+                                }
+                            }
+                        )
+                    )
                 }
                 QuickSettingTileId.TRIGGER_MODE -> {
                     val triggerLabel = when (triggerMode) {
@@ -1002,9 +1085,23 @@ private fun buildQuickSettingTileModels(
                         SystemSettingsRepository.TRIGGER_MODE_DIGITAL -> stringResource(R.string.qs_label_trigger_digital)
                         else -> stringResource(R.string.qs_label_trigger_both)
                     }
-                    add(QuickSettingTileModel(triggerLabel, R.drawable.ic_qs_trigger_mode, triggerMode != SystemSettingsRepository.TRIGGER_MODE_BOTH) {
-                        onOpenDialog(ActiveDialog.TRIGGER_MODE)
-                    })
+                    add(
+                        QuickSettingTileModel(
+                            label = triggerLabel,
+                            iconRes = R.drawable.ic_qs_trigger_mode,
+                            selected = triggerMode != SystemSettingsRepository.TRIGGER_MODE_BOTH,
+                            onLongClick = { onOpenDialog(ActiveDialog.TRIGGER_MODE) },
+                            onClick = {
+                                repository.setTriggerMode(
+                                    listOf(
+                                        SystemSettingsRepository.TRIGGER_MODE_ANALOG,
+                                        SystemSettingsRepository.TRIGGER_MODE_DIGITAL,
+                                        SystemSettingsRepository.TRIGGER_MODE_BOTH
+                                    ).nextAfter(triggerMode)
+                                )
+                            }
+                        )
+                    )
                 }
                 QuickSettingTileId.CHARGE_LIMIT_80 -> add(
                     QuickSettingTileModel(tileId.gridTitle(context), R.drawable.ic_qs_charge_limit, chargeLimit80) {
@@ -1050,6 +1147,7 @@ private fun SystemSettingsTab(
     recordingElapsedText: String,
     onOpenDialog: (ActiveDialog) -> Unit,
     onCaptureScreenshot: (Int) -> Unit,
+    onStartScreenRecording: (Int) -> Unit,
     onStopScreenRecording: () -> Unit,
     onOpenScreenCast: () -> Unit,
     onDisconnectScreenCast: () -> Unit,
@@ -1075,6 +1173,7 @@ private fun SystemSettingsTab(
         recordingElapsedText = recordingElapsedText,
         onOpenDialog = onOpenDialog,
         onCaptureScreenshot = onCaptureScreenshot,
+        onStartScreenRecording = onStartScreenRecording,
         onStopScreenRecording = onStopScreenRecording,
         onOpenScreenCast = onOpenScreenCast,
         onDisconnectScreenCast = onDisconnectScreenCast,

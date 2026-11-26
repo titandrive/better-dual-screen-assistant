@@ -159,6 +159,7 @@ class SystemSettingsRepository(private val context: Context) {
         const val PREF_SCREEN_RECORD_MIC_AUDIO = "screen_record_mic_audio"
         const val PREF_SCREEN_RECORD_FPS = "screen_record_fps"
         const val PREF_SCREENSHOT_TARGET_MODE = "screenshot_target_mode"
+        const val PREF_SCREEN_RECORD_LAST_TARGET = "screen_record_last_target"
 
         const val SCREENSHOT_TARGET_ASK = -1
         const val SCREENSHOT_TARGET_TOP = 0
@@ -465,6 +466,19 @@ class SystemSettingsRepository(private val context: Context) {
             .coerceIn(SCREENSHOT_TARGET_ASK, SCREENSHOT_TARGET_BOTH)
     )
     val screenshotTargetMode: StateFlow<Int> = _screenshotTargetMode.asStateFlow()
+
+    /** Screen the last recording captured (top/bottom/both), or [SCREENSHOT_TARGET_ASK] before the first one. */
+    private val _screenRecordLastTarget = MutableStateFlow(
+        prefs.getInt(PREF_SCREEN_RECORD_LAST_TARGET, SCREENSHOT_TARGET_ASK)
+            .coerceIn(SCREENSHOT_TARGET_ASK, SCREENSHOT_TARGET_BOTH)
+    )
+    val screenRecordLastTarget: StateFlow<Int> = _screenRecordLastTarget.asStateFlow()
+
+    fun setScreenRecordLastTarget(target: Int) {
+        val clamped = target.coerceIn(SCREENSHOT_TARGET_ASK, SCREENSHOT_TARGET_BOTH)
+        prefs.edit().putInt(PREF_SCREEN_RECORD_LAST_TARGET, clamped).apply()
+        _screenRecordLastTarget.value = clamped
+    }
 
     private val _promotedToManager = MutableStateFlow(
         prefs.getBoolean(PREF_PROMOTED_TO_MANAGER, false)
@@ -1728,20 +1742,24 @@ class SystemSettingsRepository(private val context: Context) {
         _vibrateOn.value = next
     }
 
+    /**
+     * Switches both stick LEDs on or off directly. `com.odin.settings` observes
+     * [KEY_JOYSTICK_LIGHT_ENABLED] ("left,right") and drives the LEDs from it.
+     */
     fun toggleAmbientLight() {
         if (!DeviceProfile.current(context).supportsAmbientLight) return
-        val currentProp = PrivilegedBridge.getSystemProperty("sys.light.curr.is.show", "")
-        val currentlyShowing = when (currentProp) {
-            "true", "1" -> true
-            "false", "0" -> false
-            else -> _ambientLightEnabled.value
-        }
-        val next = !currentlyShowing
+        val next = !readAmbientLightState()
+        PrivilegedBridge.putSystemSettingString(context, KEY_JOYSTICK_LIGHT_ENABLED, if (next) "1,1" else "0,0")
+        _ambientLightEnabled.value = next
+    }
+
+    /** Opens AYN's LED adjustment panel (color, brightness, per-stick switches). */
+    fun openAmbientLightPanel() {
+        if (!DeviceProfile.current(context).supportsAmbientLight) return
         val intent = Intent("com.ro.external.request.light.adj.action").apply {
-            putExtra("isShow", next)
+            putExtra("isShow", true)
         }
         context.sendBroadcast(intent)
-        _ambientLightEnabled.value = next
     }
 
     fun toggleForceLandscape() {
